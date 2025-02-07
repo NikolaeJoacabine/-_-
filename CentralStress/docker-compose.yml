@@ -1,0 +1,42 @@
+services:
+  rabbit_mq:
+    image: rabbitmq:3.8-rc-management
+    container_name: rabbit_mq
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    volumes:
+      - rabbit_mqdata:/usr/share/rabbitmq/data
+  main:
+    container_name: main
+    restart: unless-stopped
+    depends_on:
+      - rabbit_mq
+    build:
+      context: .
+      dockerfile: docker/Dockerfile-no-gpu
+    volumes:
+      - db:/usr/src/app/databases
+      - images:/usr/src/app/images
+    env_file:
+      - .env
+    command: [ "python3", "-m", "cv.worker"]
+  bot_answer:
+    container_name: bot_answer
+    restart: unless-stopped
+    depends_on:
+      - rabbit_mq
+    build:
+      context: .
+      dockerfile: docker/cv/Dockerfile-no-gpu
+    volumes:
+      - db:/usr/src/app/databases
+      - images:/usr/src/app/images
+    env_file:
+      - .env
+    command: [ "python3", "-m", "telegram.bot_answer" ]
+volumes:
+  db:
+  images:
+  rabbit_mqdata:
+    driver: local
